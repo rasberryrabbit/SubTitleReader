@@ -360,7 +360,7 @@ begin
     if stime.Time=ltime.Time then begin
       // same time
       classn:=FBody.GetSubInfo(i).lang;
-      // only selected language
+      // skip selected language
       if (skiplang='') or (skiplang<>classn) then begin
         idname:=FBody.GetSubInfo(i).Source;
         if idname<>'' then
