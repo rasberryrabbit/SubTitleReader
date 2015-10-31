@@ -627,7 +627,8 @@ begin
         Inc(i);
         while i<fLastread do begin
           if BitCount>0 then begin
-            if fBuffer[i]<#$80 then
+            // 10xxxxxx
+            if Byte(fBuffer[i]) and $C0<>$80 then
               break
               else
                 Dec(BitCount);
