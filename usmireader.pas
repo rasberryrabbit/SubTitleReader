@@ -118,12 +118,15 @@ type
       FUTF8:Boolean;
     protected
     public
+      KeepEncoding:Boolean;
+
       constructor Create;
       constructor Create(const FileName: string);
       destructor Destroy; override;
 
       procedure Load;
       procedure SaveTo(Stream:TStream);
+      function ToANSI(const s:string):string;
 
       property FileName:string read FFileName write FFileName;
       property Header:TStringList read FHeader;
@@ -143,12 +146,15 @@ type
       FUTF8:Boolean;
     protected
     public
+      KeepEncoding:Boolean;
+
       constructor Create;
       constructor Create(const FileName: string);
       destructor Destroy; override;
 
       procedure Load;
       procedure SaveTo(stream : TStream; skiplang:string = '');
+      function ToANSI(const s:string):string;
 
       property FileName:string read FFileName write FFileName;
       property Body:TSUBCaptionList read FBody;
@@ -169,6 +175,7 @@ constructor TSRTFile.Create;
 begin
   FBody:=TSUBCaptionList.Create;
   FUTF8:=True;
+  KeepEncoding:=False;
 end;
 
 constructor TSRTFile.Create(const FileName: string);
@@ -329,7 +336,7 @@ begin
                  {$ifdef USE_STRADDCAST}
                  temp:=rawbytestring(temp+LineEnding+SRTParser.ToUTF8(sl));
                  {$else}
-                 temp:=temp+LineEnding+pchar(SRTParser.ToUTF8(sl)));
+                 temp:=temp+LineEnding+pchar(SRTParser.ToUTF8(sl));
                  {$endif}
            end;
         end;
@@ -366,9 +373,9 @@ begin
         if idname<>'' then
           temp2:=temp2+idname+': ';
         {$ifdef USE_STRADDCAST}
-        temp2:=rawbytestring(temp2+FBody.Strings[i]);
+        temp2:=rawbytestring(temp2+ToANSI(FBody.Strings[i]));
         {$else}
-        temp2:=temp2+pchar(FBody.Strings[i]);
+        temp2:=temp2+pchar(ToANSI(FBody.Strings[i]));
         {$endif}
       end;
     end else begin
@@ -404,9 +411,9 @@ begin
             temp2:=pchar(temp2)+idname+': ';
             {$endif}
           {$ifdef USE_STRADDCAST}
-          temp2:=rawbytestring(temp2+FBody.Strings[i]);
+          temp2:=rawbytestring(temp2+ToANSI(FBody.Strings[i]));
           {$else}
-          temp2:=temp2+pchar(FBody.Strings[i]);
+          temp2:=temp2+pchar(ToANSI(FBody.Strings[i]));
           {$endif}
         end;
       end;
@@ -414,6 +421,14 @@ begin
     ltime:=stime;
     Inc(i);
   end;
+end;
+
+function TSRTFile.ToANSI(const s: string): string;
+begin
+  if KeepEncoding and (not FUTF8) then
+    Result:=Utf8ToAnsi(s)
+    else
+      Result:=s;
 end;
 
 { TSUBCaptionList }
@@ -747,6 +762,7 @@ begin
   FBody:=TSUBCaptionList.Create;
   FTail:=TStringList.Create;
   FUTF8:=False;
+  KeepEncoding:=False;
 end;
 
 constructor TSMIFile.Create(const FileName: string);
@@ -1043,7 +1059,7 @@ begin
       temp:=rawbytestring(temp+' Class='+classn);
     if idname<>'' then
       temp:=rawbytestring(temp+' ID='+idname);
-    temp:=rawbytestring(temp+'>'+LineEndingToBR(FBody.Strings[i]));
+    temp:=rawbytestring(temp+'>'+ToANSI(LineEndingToBR(FBody.Strings[i])));
     if (lclassn<>classn)  or (idname<>lidname) then
       temp:=rawbytestring(temp+'</P>');
     temp:=rawbytestring(temp+LineEnding);
@@ -1052,7 +1068,7 @@ begin
       temp:=pchar(temp)+' Class='+classn;
     if idname<>'' then
       temp:=pchar(temp)+' ID='+idname;
-    temp:=pchar(temp)+'>'+LineEndingToBR(FBody.Strings[i]);
+    temp:=pchar(temp)+'>'+ToANSI(LineEndingToBR(FBody.Strings[i]));
     if (lclassn<>classn)  or (idname<>lidname) then
       temp:=pchar(temp)+'</P>';
     temp:=pchar(temp)+LineEnding;
@@ -1066,6 +1082,14 @@ begin
   Stream.Write(temp[1],Length(temp));
   temp:=FTail.Text;
   Stream.Write(temp[1],Length(temp));
+end;
+
+function TSMIFile.ToANSI(const s: string): string;
+begin
+  if KeepEncoding and (not FUTF8) then
+    Result:=Utf8ToAnsi(s)
+    else
+      Result:=s;
 end;
 
 
