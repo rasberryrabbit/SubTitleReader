@@ -77,6 +77,7 @@ begin
       try
         sz:=TSRTFile.Create;
         try
+          sz.IsUTF8:=sf.IsUTF8;
           sz.Body.AddStrings(sf.Body);
           sz.SaveTo(sx);
           Memo1.Lines.Add('class : '+sz.Body.LangItem[10]);
@@ -123,6 +124,7 @@ begin
       try
         sz:=TSMIFile.Create;
         try
+          sz.IsUTF8:=sf.IsUTF8;
           sz.Body.AddStrings(sf.Body);
           sz.SaveTo(sx);
         finally

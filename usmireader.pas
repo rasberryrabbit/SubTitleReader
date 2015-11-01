@@ -133,7 +133,7 @@ type
       property Body:TSUBCaptionList read FBody;
       property Tail:TStringList read FTail;
 
-      property IsUTF8:Boolean read FUTF8;
+      property IsUTF8:Boolean read FUTF8 write FUTF8;
   end;
 
   { TSRTFile }
@@ -159,7 +159,7 @@ type
       property FileName:string read FFileName write FFileName;
       property Body:TSUBCaptionList read FBody;
 
-      property IsUTF8:Boolean read FUTF8;
+      property IsUTF8:Boolean read FUTF8 write FUTF8;
   end;
 
 
@@ -182,6 +182,7 @@ constructor TSRTFile.Create(const FileName: string);
 begin
   FBody:=TSUBCaptionList.Create;
   FUTF8:=True;
+  KeepEncoding:=False;
   FFileName:=FileName;
 end;
 
@@ -762,7 +763,7 @@ begin
   FHeader:=TStringList.Create;
   FBody:=TSUBCaptionList.Create;
   FTail:=TStringList.Create;
-  FUTF8:=False;
+  FUTF8:=True;
   KeepEncoding:=False;
 end;
 
@@ -771,6 +772,8 @@ begin
   FHeader:=TStringList.Create;
   FBody:=TSUBCaptionList.Create;
   FTail:=TStringList.Create;
+  FUTF8:=True;
+  KeepEncoding:=False;
   FFileName:=FileName;
 end;
 
