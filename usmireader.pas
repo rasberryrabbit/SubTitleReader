@@ -39,7 +39,7 @@ unit usmireader;
 interface
 
 uses
-  Classes, SysUtils;
+  Classes, SysUtils, LConvEncoding;
 
 type
 
@@ -162,12 +162,20 @@ type
       property IsUTF8:Boolean read FUTF8 write FUTF8;
   end;
 
+var
+  CPToUTF8: function(const s:string):string = @CP949ToUTF8;
+  UTF8ToCP_func: function(const s:string; SetTargetCodePage: boolean): RawByteString = @UTF8ToCP949;
 
 implementation
 
 const
   char_space = '&nbsp;';
   SRT_Between = ' --> ';
+
+function UTF8ToCP(const s:string):rawbytestring;
+begin
+  Result:=UTF8ToCP_func(s,False);
+end;
 
 { TSRTFile }
 
@@ -426,9 +434,12 @@ end;
 
 function TSRTFile.ToANSI(const s: string): string;
 begin
-  if KeepEncoding and (not FUTF8) then
-    Result:=Utf8ToAnsi(s)
-    else
+  if KeepEncoding and (not FUTF8) then begin
+    if DefaultSystemCodePage<>CP_UTF8 then
+      Result:=Utf8ToAnsi(s)
+      else
+        Result:=CPToUTF8(s);
+  end else
       Result:=s;
 end;
 
@@ -736,9 +747,13 @@ end;
 
 function TSubTitleParser.ToUTF8(const s: rawbytestring): rawbytestring;
 begin
-  if not FUTF8 then
-    Result:=AnsiToUtf8(s)
-    else
+  if not FUTF8 then begin
+    // for linux
+    if DefaultSystemCodePage<>CP_UTF8 then
+      Result:=AnsiToUtf8(s)
+      else
+        Result:=CPToUTF8(s);
+  end else
       Result:=s;
 end;
 
@@ -1090,11 +1105,16 @@ end;
 
 function TSMIFile.ToANSI(const s: string): string;
 begin
-  if KeepEncoding and (not FUTF8) then
-    Result:=Utf8ToAnsi(s)
-    else
+  if KeepEncoding and (not FUTF8) then begin
+    if DefaultSystemCodePage<>CP_UTF8 then
+      Result:=Utf8ToAnsi(s)
+      else
+        Result:=CPToUTF8(s);
+  end else
       Result:=s;
 end;
+
+initialization
 
 
 end.
