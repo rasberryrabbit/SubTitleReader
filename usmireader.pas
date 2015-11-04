@@ -162,11 +162,17 @@ type
       property IsUTF8:Boolean read FUTF8 write FUTF8;
   end;
 
+  procedure SetDefaultCP;
+
 var
   CPToUTF8: function(const s:string):string = @CP949ToUTF8;
   UTF8ToCP_func: function(const s:string; SetTargetCodePage: boolean): RawByteString = @UTF8ToCP949;
 
 implementation
+
+{$ifdef Windows}
+uses Windows;
+{$endif}
 
 const
   char_space = '&nbsp;';
@@ -438,7 +444,7 @@ begin
     if DefaultSystemCodePage<>CP_UTF8 then
       Result:=Utf8ToAnsi(s)
       else
-        Result:=CPToUTF8(s);
+        Result:=UTF8ToCP(s);
   end else
       Result:=s;
 end;
@@ -1109,12 +1115,82 @@ begin
     if DefaultSystemCodePage<>CP_UTF8 then
       Result:=Utf8ToAnsi(s)
       else
-        Result:=CPToUTF8(s);
+        Result:=UTF8ToCP(s);
   end else
       Result:=s;
 end;
 
+procedure SetDefaultCP;
+{$ifndef Windows}
+var
+  LangStr:string;
+  i:Integer;
+{$endif}
+begin
+  if DefaultSystemCodePage=CP_UTF8 then begin
+  {$ifdef Windows}
+    case GetACP of
+    // ko_KR
+    949: begin
+           CPToUTF8:=@CP949ToUTF8;
+           UTF8ToCP_func:=@UTF8ToCP949;
+         end;
+    // ja_JP
+    932: begin
+           CPToUTF8:=@CP932ToUTF8;
+           UTF8ToCP_func:=@UTF8ToCP932;
+         end;
+    // zh_TW
+    936: begin
+           CPToUTF8:=@CP936ToUTF8;
+           UTF8ToCP_func:=@UTF8ToCP936;
+         end;
+    // zh_cn
+    950: begin
+           CPToUTF8:=@CP950ToUTF8;
+           UTF8ToCP_func:=@UTF8ToCP950;
+         end;
+    end;
+  {$else}
+    LangStr := GetEnvironmentVariable('LC_ALL');
+    if Length(LangStr) = 0 then
+    begin
+      LangStr := GetEnvironmentVariable('LC_MESSAGES');
+      if Length(LangStr) = 0 then
+      begin
+        LangStr := GetEnvironmentVariable('LANG');
+      end;
+    end;
+    i:=Pos('.',LangStr);
+    if i<>0 then
+      LangStr:=Copy(LangStr,1,i-1);
+    case UpperCase(LangStr) of
+    // Korean
+    'KO_KR': begin
+           CPToUTF8:=@CP949ToUTF8;
+           UTF8ToCP_func:=@UTF8ToCP949;
+         end;
+    // Japanese
+    'JA_JP': begin
+           CPToUTF8:=@CP932ToUTF8;
+           UTF8ToCP_func:=@UTF8ToCP932;
+         end;
+    'ZH_CN': begin
+           CPToUTF8:=@CP936ToUTF8;
+           UTF8ToCP_func:=@UTF8ToCP936;
+         end;
+    // chinese big5
+    'ZH_TW': begin
+           CPToUTF8:=@CP950ToUTF8;
+           UTF8ToCP_func:=@UTF8ToCP950;
+         end;
+    end;
+  {$endif}
+  end;
+end;
+
 initialization
+  SetDefaultCP;
 
 
 end.

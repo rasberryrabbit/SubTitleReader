@@ -146,6 +146,8 @@ begin
   ts.Wordbreak:=False;
   ts.ShowPrefix:=False;
   ts.SingleLine:=False;
+  //DefaultSystemCodePage:=CP_UTF8;
+  SetDefaultCP;
 end;
 
 procedure TForm1.ListBox1DrawItem(Control: TWinControl; Index: Integer;
