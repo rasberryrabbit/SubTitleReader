@@ -33,7 +33,7 @@ unit usmireader;
 
 {$mode objfpc}{$H+}
 
-{$define USE_STRADDCAST}
+{.$define USE_STRADDCAST}
 
 
 interface
