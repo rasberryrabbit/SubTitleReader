@@ -84,7 +84,8 @@ begin
         finally
           sz.Free;
         end;
-        Memo1.Lines.Add(sx.DataString);
+        //Memo1.Lines.Add(sx.DataString);
+        sx.SaveToFile(ChangeFileExt(OpenDialog1.FileName,'.srt'));
       finally
         sx.Free;
       end;
@@ -130,7 +131,8 @@ begin
         finally
           sz.Free;
         end;
-        Memo1.Lines.Add(sx.DataString);
+        //Memo1.Lines.Add(sx.DataString);
+        sx.SaveToFile(ChangeFileExt(OpenDialog1.FileName,'.smi'));
       finally
         sx.Free;
       end;

@@ -979,13 +979,15 @@ begin
              end;
            end else begin
              if InSync then begin
-               if UpperCase(tag)='BR' then
+               if UpperCase(tag)='BR' then begin
                  {$ifdef USE_STRADDCAST}
                  temp:=RawByteString(temp+LineEnding)
                  {$else}
-                 temp:=pchar(temp)+LineEnding
+                 // disable first line break
+                 if temp<>'' then
+                   temp:=pchar(temp)+LineEnding;
                  {$endif}
-               else
+               end else
                if str='' then
                  {$ifdef USE_STRADDCAST}
                  temp:=rawbytestring(temp+'<'+tag+'>')
