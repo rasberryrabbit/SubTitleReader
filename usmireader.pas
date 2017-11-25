@@ -33,8 +33,6 @@ unit usmireader;
 
 {$mode objfpc}{$H+}
 
-{.$define USE_STRADDCAST}
-
 
 interface
 
@@ -111,12 +109,14 @@ type
   TSMIFile = class
     private
       FHeader: TStringList;
+      FStyleClass: TStringList;
       FBody:TSUBCaptionList;
       FTail:TStringList;
       FFile:TFileStream;
       FFileName:string;
       FUTF8:Boolean;
     protected
+      function GetStyleClass(const CName:string):string;
     public
       KeepEncoding:Boolean;
 
@@ -131,6 +131,7 @@ type
       property FileName:string read FFileName write FFileName;
       property Header:TStringList read FHeader;
       property Body:TSUBCaptionList read FBody;
+      property StyleClass:TStringList read FStyleClass;
       property Tail:TStringList read FTail;
 
       property IsUTF8:Boolean read FUTF8 write FUTF8;
@@ -348,11 +349,7 @@ begin
              if temp='' then
                temp:=pchar(SRTParser.ToUTF8(sl))
                else
-                 {$ifdef USE_STRADDCAST}
-                 temp:=rawbytestring(temp+LineEnding+SRTParser.ToUTF8(sl));
-                 {$else}
                  temp:=temp+LineEnding+pchar(SRTParser.ToUTF8(sl));
-                 {$endif}
            end;
         end;
       end;
@@ -387,22 +384,14 @@ begin
         idname:=FBody.GetSubInfo(i).Source;
         if idname<>'' then
           temp2:=temp2+idname+': ';
-        {$ifdef USE_STRADDCAST}
-        temp2:=rawbytestring(temp2+ToANSI(FBody.Strings[i]));
-        {$else}
         temp2:=temp2+pchar(ToANSI(FBody.Strings[i]));
-        {$endif}
       end;
     end else begin
       if temp<>'' then begin
         // end time
         temp:=temp+FBody.TimeToStrEx[i]+LineEnding;
         stream.Write(temp[1],Length(temp));
-        {$ifdef USE_STRADDCAST}
-        temp2:=rawbytestring(temp2+LineEnding);
-        {$else}
         temp2:=pchar(temp2)+LineEnding;
-        {$endif}
         stream.Write(temp2[1],Length(temp2));
         temp2:=LineEnding;
         stream.Write(temp2[1],Length(temp2));
@@ -420,16 +409,8 @@ begin
         if (skiplang='') or (skiplang<>classn) then begin
           idname:=FBody.GetSubInfo(i).Source;
           if idname<>'' then
-            {$ifdef USE_STRADDCAST}
-            temp2:=rawbytestring(temp2+idname+': ');
-            {$else}
             temp2:=pchar(temp2)+idname+': ';
-            {$endif}
-          {$ifdef USE_STRADDCAST}
-          temp2:=rawbytestring(temp2+ToANSI(FBody.Strings[i]));
-          {$else}
           temp2:=temp2+pchar(ToANSI(FBody.Strings[i]));
-          {$endif}
         end;
       end;
     end;
@@ -779,23 +760,78 @@ end;
 
 { TSMIFile }
 
+function SpliteStyle(var s:string):string;
+var
+  i, len: Integer;
+  c : char;
+begin
+  Result:='';
+  i:=1;
+  len:=Length(s);
+  while i<=len do begin
+    c := s[i];
+    if (c>#32) or (c<>'{') then
+      Result:=Result+c
+      else
+        break;
+    Inc(i);
+  end;
+  Delete(s,1,i-1);
+end;
+
+function TSMIFile.GetStyleClass(const CName: string): string;
+var
+  Idx, psStyle, peStyle:Integer;
+  s, stag, sclass:string;
+begin
+  Result:='';
+  sclass:='.'+CName;
+  Idx:=FStyleClass.IndexOfName(sclass);
+  if Idx=-1 then begin
+    s:=UpperCase(FHeader.Text);
+    psStyle:=Pos('<STYLE',s);
+    if psStyle>0 then
+      Inc(psStyle,6)
+      else
+        exit;
+    peStyle:=Pos('</STYLE',s);
+    stag:=Copy(s,psStyle,peStyle-psStyle);
+    if stag<>'' then begin
+      psStyle:=Pos(UpperCase(sclass),stag);
+      if psStyle>0 then begin
+        peStyle:=Pos('}',stag,psStyle);
+        if peStyle>0 then begin
+          Result:=Copy(stag,psStyle,peStyle-psStyle+1);
+          stag:=SpliteStyle(Result);
+          FStyleClass.Add(stag+'='+Result);
+        end;
+      end;
+    end;
+  end else
+    Result:=FStyleClass.Names[Idx];
+end;
+
 constructor TSMIFile.Create;
 begin
   FHeader:=TStringList.Create;
+  FStyleClass:=TStringList.Create;
   FBody:=TSUBCaptionList.Create;
   FTail:=TStringList.Create;
   FUTF8:=True;
   KeepEncoding:=False;
+  FStyleClass.CaseSensitive:=False;
 end;
 
 constructor TSMIFile.Create(const FileName: string);
 begin
   FHeader:=TStringList.Create;
+  FStyleClass:=TStringList.Create;
   FBody:=TSUBCaptionList.Create;
   FTail:=TStringList.Create;
   FUTF8:=True;
   KeepEncoding:=False;
   FFileName:=FileName;
+  FStyleClass.CaseSensitive:=False;
 end;
 
 destructor TSMIFile.Destroy;
@@ -805,6 +841,7 @@ begin
   FTail.Free;
   FBody.Free;
   FHeader.Free;
+  FStyleClass.Free;
   inherited Destroy;
 end;
 
@@ -843,6 +880,7 @@ var
   langclass, source : string;
 begin
   FHeader.Clear;
+  FStyleClass.Clear;
   FTail.Clear;
   FBody.Clear;
   FFile:=TFileStream.Create(FFileName,fmOpenRead);
@@ -858,11 +896,7 @@ begin
        while not SMIParser.Eof do begin
          SMIParser.ReadBlock(tag,str);
          if tag='' then begin
-           {$ifdef USE_STRADDCAST}
-           temp:=rawbytestring(temp+SMIParser.ToUtf8(str));
-           {$else}
            temp:=temp+pchar(SMIParser.ToUtf8(str));
-           {$endif}
          end else begin
            tag:=UpperCase(tag);
            if tag='BODY' then begin
@@ -917,6 +951,7 @@ begin
                  if UpperCase(attr)='CLASS' then begin
                    langclass:=idstr;
                    FBody.AddLang(langclass);
+                   GetStyleClass(langclass);
                    // id = source
                    end else if UpperCase(attr)='ID' then
                      source:=idstr;
@@ -980,26 +1015,14 @@ begin
            end else begin
              if InSync then begin
                if UpperCase(tag)='BR' then begin
-                 {$ifdef USE_STRADDCAST}
-                 temp:=RawByteString(temp+LineEnding)
-                 {$else}
                  // disable first line break
                  if temp<>'' then
                    temp:=pchar(temp)+LineEnding;
-                 {$endif}
                end else
                if str='' then
-                 {$ifdef USE_STRADDCAST}
-                 temp:=rawbytestring(temp+'<'+tag+'>')
-                 {$else}
                  temp:=pchar(temp)+'<'+tag+'>'
-                 {$endif}
                  else
-                   {$ifdef USE_STRADDCAST}
-                   temp:=rawbytestring(temp+'<'+tag+' '+SMIParser.ToUtf8(str)+'>');
-                   {$else}
                    temp:=pchar(temp)+'<'+tag+' '+pchar(SMIParser.ToUtf8(str))+'>';
-                   {$endif}
              end else begin
                if str='' then
                  temp:='<'+tag+'>'
@@ -1007,11 +1030,7 @@ begin
                    if (PartId=1) and (tag='!--') then
                      temp:=''
                      else
-                       {$ifdef USE_STRADDCAST}
-                       temp:=rawbytestring('<'+tag+' '+SMIParser.ToUtf8(str)+'>')
-                       {$else}
                        temp:='<'+tag+' '+pchar(SMIParser.ToUtf8(str))+'>'
-                       {$endif}
                  end;
              end;
            end;
@@ -1081,16 +1100,6 @@ begin
     temp:='<P';
     classn:=FBody.GetSubInfo(i).lang;
     idname:=FBody.GetSubInfo(i).Source;
-    {$ifdef USE_STRADDCAST}
-    if classn<>'' then
-      temp:=rawbytestring(temp+' Class='+classn);
-    if idname<>'' then
-      temp:=rawbytestring(temp+' ID='+idname);
-    temp:=rawbytestring(temp+'>'+ToANSI(LineEndingToBR(FBody.Strings[i])));
-    if (lclassn<>classn)  or (idname<>lidname) then
-      temp:=rawbytestring(temp+'</P>');
-    temp:=rawbytestring(temp+LineEnding);
-    {$else}
     if classn<>'' then
       temp:=pchar(temp)+' Class='+classn;
     if idname<>'' then
@@ -1099,7 +1108,6 @@ begin
     if (lclassn<>classn)  or (idname<>lidname) then
       temp:=pchar(temp)+'</P>';
     temp:=pchar(temp)+LineEnding;
-    {$endif}
     Stream.Write(temp[1],Length(temp));
     ltime:=ctime;
     lidname:=idname;
