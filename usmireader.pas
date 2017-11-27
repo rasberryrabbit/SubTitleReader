@@ -52,6 +52,7 @@ type
 
   TSUBCaptionList = class(TStringList)
     private
+      fLangList:TStringList;
       function GetLangName(Idx: Integer): string;
       function GetSubInfo(Idx:Integer):TSubtitleInfo;
       function GetTimestampString(Idx: Integer): string;
@@ -61,7 +62,6 @@ type
       function GetTimeString(Idx: Integer): string;
     protected
     public
-      LangList:string;
 
       constructor Create;
       destructor Destroy; override;
@@ -69,7 +69,7 @@ type
       function Add(const S: string): Integer; override;
       procedure AddStrings(TheStrings: TStrings); overload; override;
       procedure Clear; override;
-      procedure AddLang(const s:string);
+      procedure AddLang(const id,value:string);
 
       property SubInfo[Idx:Integer]:TSubtitleInfo read GetSubInfo;
       property TimeStart[Idx:Integer]:TTimeStamp read GetTimeStart;
@@ -78,6 +78,7 @@ type
       property TimeToStr[Idx:Integer]:string read GetTimeString;
       property TimeToStrEx[Idx:Integer]:string read GetTimestampString;
       property LangItem[Idx:Integer]:string read GetLangName;
+      property LangList:TStringList read fLangList;
   end;
 
   { TSubTitleParser }
@@ -117,6 +118,7 @@ type
       FUTF8:Boolean;
     protected
       function GetStyleClass(const CName:string):string;
+      function ParseStyle(const s:string):string;
     public
       KeepEncoding:Boolean;
 
@@ -178,6 +180,7 @@ uses Windows;
 const
   char_space = '&nbsp;';
   SRT_Between = ' --> ';
+  nbsp_utf8 = #$c2#$a0;
 
 function UTF8ToCP(const s:string):rawbytestring;
 begin
@@ -346,6 +349,8 @@ begin
         // subtitle
         else
            begin
+             if sl=nbsp_utf8 then
+               sl:=char_space;
              if temp='' then
                temp:=pchar(SRTParser.ToUTF8(sl))
                else
@@ -363,6 +368,8 @@ begin
 end;
 
 procedure TSRTFile.SaveTo(stream: TStream; skiplang: string);
+const
+  c_space:string=' ';
 var
   i, Idx : Integer;
   temp, temp2:string;
@@ -376,7 +383,7 @@ begin
   temp2:='';
   while i<FBody.Count do begin
     stime:=FBody.GetSubInfo(i).STime;
-    if stime.Time=ltime.Time then begin
+    {if stime.Time=ltime.Time then begin
       // same time
       classn:=FBody.GetSubInfo(i).lang;
       // skip selected language
@@ -386,7 +393,7 @@ begin
           temp2:=temp2+idname+': ';
         temp2:=temp2+pchar(ToANSI(FBody.Strings[i]));
       end;
-    end else begin
+    end else begin}
       if temp<>'' then begin
         // end time
         temp:=temp+FBody.TimeToStrEx[i]+LineEnding;
@@ -399,23 +406,36 @@ begin
         temp2:='';
         Inc(Idx);
       end;
-      if LowerCase(pchar(FBody.Strings[i]))=char_space then begin
-        // nothing
-      end else begin
-        // start time
-        temp:=IntToStr(Idx)+LineEnding+FBody.TimeToStrEx[i]+SRT_Between;
-        classn:=FBody.GetSubInfo(i).lang;
-        // only selected language
-        if (skiplang='') or (skiplang<>classn) then begin
-          idname:=FBody.GetSubInfo(i).Source;
-          if idname<>'' then
-            temp2:=pchar(temp2)+idname+': ';
-          temp2:=temp2+pchar(ToANSI(FBody.Strings[i]));
-        end;
+      // start time
+      temp:=IntToStr(Idx)+LineEnding+FBody.TimeToStrEx[i]+SRT_Between;
+      classn:=FBody.GetSubInfo(i).lang;
+      // only selected language
+      if (skiplang='') or (skiplang<>classn) then begin
+        idname:=FBody.GetSubInfo(i).Source;
+        if idname<>'' then
+          temp2:=pchar(temp2)+idname+': ';
+        if LowerCase(pchar(FBody.Strings[i]))=char_space then
+          temp2:=temp2+nbsp_utf8
+          else
+            temp2:=temp2+pchar(ToANSI(FBody.Strings[i]));
       end;
-    end;
+    {end;}
     ltime:=stime;
     Inc(i);
+  end;
+  // write last item
+  if temp<>'' then begin
+    // end time
+    Dec(i);
+    temp:=temp+FBody.TimeToStrEx[i]+LineEnding;
+    stream.Write(temp[1],Length(temp));
+    temp2:=pchar(temp2)+LineEnding;
+    stream.Write(temp2[1],Length(temp2));
+    temp2:=LineEnding;
+    stream.Write(temp2[1],Length(temp2));
+    temp:='';
+    temp2:='';
+    Inc(Idx);
   end;
 end;
 
@@ -438,24 +458,13 @@ begin
 end;
 
 function TSUBCaptionList.GetLangName(Idx: Integer): string;
-var
-  ss:TStringList;
 begin
-  ss:=TStringList.Create;
-  try
-    ss.Delimiter:='|';
-    ss.DelimitedText:=LangList;
-    if Idx<ss.Count then
-      Result:=ss.Strings[idx]
-      else begin
-        if ss.Count>0 then
-          Result:=ss.Strings[ss.Count-1]
-          else
-            Result:='';
-      end;
-  finally
-    ss.Free;
-  end;
+  if fLangList.Count>0  then begin
+    if Idx>=fLangList.Count then
+      Idx:=fLangList.Count-1;
+    Result:=fLangList.Names[Idx];
+  end else
+      Result:='';
 end;
 
 function TSUBCaptionList.GetTimestampString(Idx: Integer): string;
@@ -492,11 +501,13 @@ constructor TSUBCaptionList.Create;
 begin
   inherited Create;
   OwnsObjects:=True;
-  LangList:='';
+  fLangList:=TStringList.Create;
+  fLangList.CaseSensitive:=False;
 end;
 
 destructor TSUBCaptionList.Destroy;
 begin
+  fLangList.Free;
   inherited Destroy;
 end;
 
@@ -517,7 +528,7 @@ var
 begin
   IsSUBCaption:=TheStrings is TSUBCaptionList;
   if IsSUBCaption then
-    LangList:=TSUBCaptionList(TheStrings).LangList;
+    fLangList.AddStrings(TSUBCaptionList(TheStrings).LangList);
   BeginUpdate;
   try
     for i:=0 to TheStrings.Count-1 do begin
@@ -541,24 +552,13 @@ end;
 procedure TSUBCaptionList.Clear;
 begin
   inherited Clear;
-  LangList:='';
+  fLangList.Clear;
 end;
 
-procedure TSUBCaptionList.AddLang(const s: string);
-var
-  ss:TStringList;
+procedure TSUBCaptionList.AddLang(const id, value: string);
 begin
-  ss:=TStringList.Create;
-  try
-    ss.Delimiter:='|';
-    ss.DelimitedText:=LangList;
-    if -1=ss.IndexOf(s) then begin
-      ss.Add(s);
-      LangList:=ss.DelimitedText;
-    end;
-  finally
-    ss.Free;
-  end;
+  if fLangList.IndexOfName(id)=-1 then
+    fLangList.Add(id+'='+value);
 end;
 
 
@@ -770,7 +770,7 @@ begin
   len:=Length(s);
   while i<=len do begin
     c := s[i];
-    if (c>#32) or (c<>'{') then
+    if (c>#32) and (c<>'{') then
       Result:=Result+c
       else
         break;
@@ -809,6 +809,45 @@ begin
     end;
   end else
     Result:=FStyleClass.Names[Idx];
+  Result:=ParseStyle(Result);
+end;
+
+function TSMIFile.ParseStyle(const s: string): string;
+var
+  i, len, InDef: Integer;
+  prop, value: string;
+  c : char;
+begin
+  Result:='';
+  i:=1;
+  len:=Length(s);
+  prop:='';
+  value:='';
+  InDef:=0;
+  while i<=Len do begin
+    c:=s[i];
+    case c of
+    '{': InDef:=1;
+    ':': InDef:=2;
+    ';','}': begin
+               InDef:=1;
+               if (Length(prop)>0) and (UpperCase(prop)='LANG') then begin
+                 Result:=Value;
+                 break;
+               end;
+               prop:='';
+               value:='';
+             end
+    else
+      if c>#32 then
+        if InDef=1 then
+          prop:=prop+c
+          else
+            value:=value+c;
+    end;
+    Inc(i);
+  end;
+
 end;
 
 constructor TSMIFile.Create;
@@ -873,7 +912,7 @@ end;
 procedure TSMIFile.Load;
 var
   SMIParser:TSubTitleParser;
-  tag, str, temp, idstr, attr: string;
+  tag, str, temp, idstr, attr, langdata: string;
   PartId, ipos, attrlvl, ix: Integer;
   InSync: Boolean;
   subTime:TTimeStamp;
@@ -950,8 +989,10 @@ begin
                  // class
                  if UpperCase(attr)='CLASS' then begin
                    langclass:=idstr;
-                   FBody.AddLang(langclass);
-                   GetStyleClass(langclass);
+                   // get lang id
+                   langdata:=GetStyleClass(langclass);
+                   if langdata<>'' then
+                     FBody.AddLang(langclass,langdata);
                    // id = source
                    end else if UpperCase(attr)='ID' then
                      source:=idstr;

@@ -66,7 +66,7 @@ begin
         Memo1.Lines.Add(rawbytestring(sf.Body.TimeToStrEx[i]
                         +' : '+sf.Body.Lang[i]+' : '+sf.Body.Strings[i]));
         }
-        ListBox1.AddItem(rawbytestring(sf.Body.TimeToStrEx[i]
+        ListBox1.AddItem(rawbytestring(IntToStr(i)+' '+ sf.Body.TimeToStrEx[i]
                         +' ('+sf.Body.Lang[i]+')'+LineEnding+sf.Body.Strings[i]),nil);
       end;
       ListBox1.Items.EndUpdate;
