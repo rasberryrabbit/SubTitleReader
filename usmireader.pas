@@ -311,7 +311,7 @@ var
   sidx, ipos, ioff, eidx:Integer;
 begin
   FBody.Clear;
-  FFile:=TFileStream.Create(FFileName,fmOpenRead);
+  FFile:=TFileStream.Create(UTF8Decode(FFileName),fmOpenRead);
   try
     Parselvl:=0;
     sidx:=-1;
@@ -922,7 +922,7 @@ begin
   FStyleClass.Clear;
   FTail.Clear;
   FBody.Clear;
-  FFile:=TFileStream.Create(FFileName,fmOpenRead);
+  FFile:=TFileStream.Create(UTF8Decode(FFileName),fmOpenRead);
   try
     PartId:=0;
     InSync:=False;

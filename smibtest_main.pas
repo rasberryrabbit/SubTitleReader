@@ -85,7 +85,7 @@ begin
           sz.Free;
         end;
         //Memo1.Lines.Add(sx.DataString);
-        sx.SaveToFile(ChangeFileExt(OpenDialog1.FileName,'.srt'));
+        sx.SaveToFile(UTF8Decode(ChangeFileExt(OpenDialog1.FileName,'.srt')));
       finally
         sx.Free;
       end;
@@ -132,7 +132,7 @@ begin
           sz.Free;
         end;
         //Memo1.Lines.Add(sx.DataString);
-        sx.SaveToFile(ChangeFileExt(OpenDialog1.FileName,'.smi'));
+        sx.SaveToFile(UTF8Decode(ChangeFileExt(OpenDialog1.FileName,'.smi')));
       finally
         sx.Free;
       end;
