@@ -343,8 +343,11 @@ begin
              ipos:=ReadBetween(sl,ipos,dummy);
              // end time
              ipos:=ReadTime(sl,ipos,stime);
+             {
+             // ignore end time
              eidx:=FBody.Add(char_space);
              FBody.GetSubInfo(eidx).STime:=StrTimeToTimeStamp(stime);
+             }
            end
         // subtitle
         else
