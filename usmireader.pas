@@ -386,43 +386,31 @@ begin
   temp2:='';
   while i<FBody.Count do begin
     stime:=FBody.GetSubInfo(i).STime;
-    {if stime.Time=ltime.Time then begin
-      // same time
-      classn:=FBody.GetSubInfo(i).lang;
-      // skip selected language
-      if (skiplang='') or (skiplang<>classn) then begin
-        idname:=FBody.GetSubInfo(i).Source;
-        if idname<>'' then
-          temp2:=temp2+idname+': ';
-        temp2:=temp2+pchar(ToANSI(FBody.Strings[i]));
-      end;
-    end else begin}
-      if temp<>'' then begin
-        // end time
-        temp:=temp+FBody.TimeToStrEx[i]+LineEnding;
-        stream.Write(temp[1],Length(temp));
-        temp2:=pchar(temp2)+LineEnding;
-        stream.Write(temp2[1],Length(temp2));
-        temp2:=LineEnding;
-        stream.Write(temp2[1],Length(temp2));
-        temp:='';
-        temp2:='';
-        Inc(Idx);
-      end;
-      // start time
-      temp:=IntToStr(Idx)+LineEnding+FBody.TimeToStrEx[i]+SRT_Between;
-      classn:=FBody.GetSubInfo(i).lang;
-      // only selected language
-      if (skiplang='') or (skiplang<>classn) then begin
-        idname:=FBody.GetSubInfo(i).Source;
-        if idname<>'' then
-          temp2:=pchar(temp2)+idname+': ';
-        if LowerCase(pchar(FBody.Strings[i]))=char_space then
-          temp2:=temp2+nbsp_utf8
-          else
-            temp2:=temp2+pchar(ToANSI(FBody.Strings[i]));
-      end;
-    {end;}
+    if temp<>'' then begin
+      // end time
+      temp:=temp+FBody.TimeToStrEx[i]+LineEnding;
+      stream.Write(temp[1],Length(temp));
+      temp2:=pchar(temp2)+LineEnding;
+      stream.Write(temp2[1],Length(temp2));
+      temp2:=LineEnding;
+      stream.Write(temp2[1],Length(temp2));
+      temp:='';
+      temp2:='';
+      Inc(Idx);
+    end;
+    // start time
+    temp:=IntToStr(Idx)+LineEnding+FBody.TimeToStrEx[i]+SRT_Between;
+    classn:=FBody.GetSubInfo(i).lang;
+    // only selected language
+    if (skiplang='') or (skiplang<>classn) then begin
+      idname:=FBody.GetSubInfo(i).Source;
+      if idname<>'' then
+        temp2:=pchar(temp2)+idname+': ';
+      if LowerCase(pchar(FBody.Strings[i]))=char_space then
+        temp2:=temp2+nbsp_utf8
+        else
+          temp2:=temp2+pchar(ToANSI(FBody.Strings[i]));
+    end;
     ltime:=stime;
     Inc(i);
   end;
